@@ -1,86 +1,31 @@
-# Конвертер валют и коллекции
-## Disclamer: 
-Cборка и запуск в CI будет производиться на образе, основанном на `JVM eclipse-temurin-focal-17.0.5`. Рекомендуем использовать похожий JDK для локального запуска проекта, например от [Adoptium](https://adoptium.net/marketplace/)
+# Коллекции
+Реализуйте все функции в папке collections
 
-Сборка и последующая проверка домашки будет осуществляться только, если она залита в отдельную ветку, и открыт PR.
+Покройте функции тестами
 
-Перед запуском тестов также проверяется форматирование кода при помощи плагина [scalafmt](https://scalameta.org/scalafmt/docs/installation.html). Поэтому проверьте корректность форматирования перед тем, как будете заливать свой код в репозиторий (либо на уровне IDE, либо при помощи scalafmt cli)
+# Проветривание
 
-## Конвертер валют
-Ваша задача реализовать простой конвертер валют. 
-```scala=
-object Currencies {
-    val SupportedCurrencies = Set("RUB", "USD", "EUR")
-}
+В Калтане офис компании Тинькофф имеет очень продолговатую форму, так что программисты могут сидеть только в одном ряду.
+К сожалению, в офисе недостаточно кондиционеров, а сидят в нем только скалисты в количестве **N** штук. Из-за жалоб на духоту,
+HR менеджер по имени Пильзида приняла решение купить каждому скалисту вентилятор, но выяснилось, что в некоторых 
+случаях одного вентилятора недостаточно, и нужно выдавать несколько. Тогда Пильзида решила определить степень духоты
+каждого скалиста и выдать количество вентиляторов, зависящее от самого жаркого скалиста в окрестности размера **К**.
+Для этого ей необходимо найти самого жаркого скалиста для каждой последовательности скалистов размера **К**.
 
-class MoneyAmountShouldBePositiveException extends Exception
-class UnsupportedCurrencyException extends Exception
-class WrongCurrencyException extends Exception
+1) Помогите Пильзиде найти два решения:
+   1) При помощи методов, которые предоставляет лист
+   2) Оказалось, что офис в Калтане слишком длинный, а вентиляторы надо поставлять очень быстро. Поэтому вам нужно придумать решение O(N) по времени и O(k) по памяти. Нельзя использовать мутабельные структуры
 
-case class Money private (amount: BigDecimal, currency: String) {
-    def +(other: Money): Money = ???
-    def -(other: Money): Money = ???
-    def isSameCurrency(other: Money): Boolean = ???
-}
+Пример:
 
+Вход:
 
-class CurrencyConverter(ratesDictionary: Map[String, Map[String, BigDecimal]]) {
-    def exchange(money: Money, toCurrency: String): Money = ??? 
-}
-object CurrencyConverter {
-    import Currencies.SupportedCurrencies
+List(1, 2, 3, 4), k = 2
 
-    def apply(ratesDictionary: Map[String, Map[String, BigDecimal]]) = {
-        val fromCurrencies = ratesDictionary.keys
-        val toCurrencies = ratesDictionary.values
-        if (fromCurrencies.toSet.subsetOf(SupportedCurrencies) && toCurrencies.forall(_.keys.toSet.subsetOf(SupportedCurrencies)))
-          new CurrencyConverter(ratesDictionary)
-        else throw new UnsupportedCurrencyException
-        
-    }
-}
-```
-- Создайте новый пакет converter в src/main/scala
-- Распределите код снипета выше по файлам: ошибки в отдельный объект errors, Money отдельно, CurrencyConverter и Currencies отдельно
-- Реализуйте все функции, чье тело заменено на `???`. `Money` не может иметь негативное количество (`amount`). Операции с `Money` не могут быть выполнены с различными валютами.
-- Создайте [объект-компаньон](https://docs.scala-lang.org/overviews/scala-book/companion-objects.html) `Money`, и реализуйте метод `def apply(amount: BigDecimal, currency: String)`, так называемый смарт-конструктор. Метод должен проверять:
-  - `amount` должен быть неотрицательным или бросать исключение `MoneyAmountShouldBePositiveException`
-  - `currency` должна содержаться в `CurrencyRate.SupportedCurrencies`, иначе бросать `UnsupportedCurrencyException`
-- `exchange` не может быть вызван между одинаковыми валютами, иначе бросать `WrongCurrencyException`
+Выход:
 
-### Tests
-- Теперь пришло время протестировать наш конвертер
-- Откройте `project/Dependencies.scala` и добавьте [ScalaTest](https://www.scalatest.org) библиотеку с конфигурацией `Test`.
-  - Подробнее про настройку sbt можно почитать в [офф доке](https://www.scala-sbt.org/1.x/docs/sbt-by-example.html), либо в [данном любительском переводе](https://riptutorial.com/Download/sbt-ru.pdf)
-- Используйте эту зависимость в `build.sbt` в настройке `libraryDependencies` в `root` модуле
-- Создайте пакет converter in `src/test/scala`
-- Создайте `CurrencyConverterSpec.scala` файл и добавьте в него снипет ниже
+List(2, 3, 4)
 
-```scala=
-class CurrencyConverterSpec extends AnyFlatSpec with Matchers {
-  "exchange" should "convert money for supported currencies" in {
-    val rates = Map(
-      "USD" -> Map("RUB" -> BigDecimal(72.5)),
-      "RUB" -> Map("USD" -> BigDecimal(1/72.5))
-    )
-    val converter = CurrencyConverter(rates)
-    val exchangedRub = converter.exchange(new Money(2, "USD"), "RUB")
-    val exchangedUsd = converter.exchange(new Money(10, "RUB"), "USD")
-    exchangedRub.amount shouldEqual 145
-    exchangedRub.currency shouldEqual "RUB"
-    exchangedUsd.amount shouldEqual BigDecimal(1/7.25)
-    exchangedUsd.currency shouldEqual "USD"
-  }
+Объяснение:
 
-  "converted constructor" should "throw UnsupportedCurrencyException if rates dictionary contains wrong currency" in {
-    val rates = Map(
-      "GBP" -> Map("RUB" -> BigDecimal(85))
-    )
-    assertThrows[UnsupportedCurrencyException] {
-      CurrencyConverter(rates)
-    }
-  }
-}
-```
-- Запустить тесты можно через IDE – слева от названия класса и каждого теста отдельно будет зеленая кнопка 'Play'. Также можно запустить через sbt shell используя команду `test`. Попробуйте оба способа, так как IDE может не всегда корректно подтягивать тесты для запуска.
-- Напишите тесты на остальные возможные результаты функции `exchange` и методов `Money` и его конструктора. Не забудьте протестировать возможные исключения
+Для нашего офиса существует 3 подлиста размером 2: [[1, 2], [2, 3], [3, 4]]. Возьмем максимальных душнил в каждом из этих листов и получим ответ: [2, 3, 4]
